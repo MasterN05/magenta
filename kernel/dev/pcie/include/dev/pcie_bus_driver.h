@@ -101,7 +101,7 @@ public:
 
     // Set a bus driver's memory address space to MMIO or IO.
     //
-    // This is a workaround to get around a problem with the current
+    // TODO(cja): This is a workaround to get around a problem with the current
     // system of initializing PCI. Presently, while PCI is in the kernel,
     // we create the PcieBusDriver singleton in a platform specific early
     // init hook linked via LK_INIT_HOOK, then after ACPI runs we add roots
