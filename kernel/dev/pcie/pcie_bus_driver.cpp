@@ -39,7 +39,8 @@ constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_MAX_MEM;
 mxtl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
 Mutex PcieBusDriver::driver_lock_;
 
-PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
+PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform)
+                             : is_mmio_(true), platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
     // TODO(johngro): For now, if the bus driver is shutting down and unloading,
     // ASSERT that there are no currently claimed devices out there.  In the the
@@ -490,6 +491,10 @@ const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
 
+    if (!is_mmio_) {
+        TRACEF("PIO space unimplemented!\n");
+        return nullptr;
+    }
     // Find the region which would contain this bus_id, if any.
     // add does not overlap with any already defined regions.
     AutoLock ecam_region_lock(&ecam_region_lock_);
