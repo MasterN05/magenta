@@ -14,6 +14,15 @@
 
 #include "usb-virtual-bus.h"
 
+// for mapping bEndpointAddress value to/from index in range 0 - 31
+// OUT endpoints are in range 1 - 15, IN endpoints are in range 17 - 31
+#define ep_address_to_index(addr) (((addr) & 0xF) | (((addr) & 0x80) >> 3))
+#define ep_index_to_address(index) (((index) & 0xF) | (((index) & 0x10) << 3))
+#define OUT_EP_START    1
+#define OUT_EP_END      15
+#define IN_EP_START     17
+#define IN_EP_END       31
+
 static int usb_virtual_bus_thread(void* arg) {
     usb_virtual_bus_t* bus = arg;
 
@@ -31,50 +40,33 @@ static int usb_virtual_bus_thread(void* arg) {
         }
 
         for (unsigned i = 1; i < USB_MAX_EPS; i++) {
-            // odd numbered endpoints are OUT direction
-            bool out = (i & 1);
+            bool out = (i < IN_EP_START);
 
             while ((txn = list_peek_head_type(&bus->host_txns[i], iotxn_t, node)) != NULL) {
                 iotxn_t* device_txn = list_peek_head_type(&bus->device_txns[i], iotxn_t, node);
-                size_t length = txn->length;
 
-                if (out) {
-                    list_delete(&txn->node);
-
-                    if (device_txn) {
-                        list_delete(&device_txn->node);
-
-                        if (length > device_txn->length) {
-                            length = device_txn->length;
-                        }
-                        void* data;
-                        iotxn_mmap(txn, &data);
-                        iotxn_copyto(device_txn, data, length, 0);
-                        iotxn_complete(txn, MX_OK, length);
-                        iotxn_complete(device_txn, MX_OK, length);
-                    } else {
-                        // device not ready to read
-                        iotxn_complete(txn, MX_ERR_IO_REFUSED, 0);
-                    }
-                } else {
-                    // IN direction
-                    if (!device_txn) {
-                        // no data to read
-                        break;
-                    }
-
+                if (device_txn) {
                     list_delete(&txn->node);
                     list_delete(&device_txn->node);
 
+                    size_t length = txn->length;
                     if (length > device_txn->length) {
                         length = device_txn->length;
                     }
 
                     void* data;
                     iotxn_mmap(txn, &data);
-                    iotxn_copyfrom(device_txn, data, length, 0);
+
+                    if (out) {
+                        iotxn_copyto(device_txn, data, length, 0);
+                    } else {
+                        iotxn_copyfrom(device_txn, data, length, 0);
+                    }
+
                     iotxn_complete(txn, MX_OK, length);
                     iotxn_complete(device_txn, MX_OK, length);
+                } else {
+                    break;
                 }
             }
         }
@@ -104,22 +96,22 @@ static void usb_bus_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     if (txn->protocol == MX_PROTOCOL_USB) {
         usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
-        uint8_t ep_address = data->ep_address;
-        if (ep_address >= USB_MAX_EPS) {
+        uint8_t index = ep_address_to_index(data->ep_address);
+        if (index >= USB_MAX_EPS) {
             iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
             return;
         }
-        list_add_tail(&bus->host_txns[ep_address], &txn->node);
+        list_add_tail(&bus->host_txns[index], &txn->node);
         completion_signal(&bus->completion);
     } else if (txn->protocol == MX_PROTOCOL_USB_FUNCTION) {
         usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
-        uint8_t ep_address = data->ep_address;
-        if (ep_address == 0 || ep_address >= USB_MAX_EPS) {
+        uint8_t index = ep_address_to_index(data->ep_address);
+        if (index == 0 || index >= USB_MAX_EPS) {
             iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
             return;
         }
 
-        list_add_tail(&bus->device_txns[ep_address], &txn->node);
+        list_add_tail(&bus->device_txns[index], &txn->node);
         completion_signal(&bus->completion);
     } else {
         iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);

@@ -53,7 +53,6 @@ typedef struct usb_device {
 #define IN_EP_START     17
 #define IN_EP_END       31
 
-
 static void usb_function_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_function_t* function = ctx;
     // pass down to the DCI driver

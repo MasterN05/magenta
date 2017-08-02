@@ -788,6 +788,6 @@ static mx_driver_ops_t usb_mass_storage_driver_ops = {
 MAGENTA_DRIVER_BEGIN(usb_mass_storage, usb_mass_storage_driver_ops, "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_MSC),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, 6),      // SCSI transparent command set
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0x50),   // bulk-only protocol
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),
 MAGENTA_DRIVER_END(usb_mass_storage)
