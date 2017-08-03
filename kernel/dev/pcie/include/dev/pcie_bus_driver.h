@@ -246,7 +246,7 @@ private:
     RootCollection                      roots_;
     mxtl::SinglyLinkedList<mxtl::RefPtr<PciConfig>> configs_;
 
-    bool                                is_mmio_ = true;
+    bool                                is_mmio_;
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
     RegionAllocator                     mmio_lo_regions_;
     RegionAllocator                     mmio_hi_regions_;

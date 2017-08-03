@@ -40,8 +40,7 @@ constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_MAX_MEM;
 mxtl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
 Mutex PcieBusDriver::driver_lock_;
 
-PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform)
-                             : is_mmio_(true), platform_(platform) { }
+PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
     // TODO(johngro): For now, if the bus driver is shutting down and unloading,
     // ASSERT that there are no currently claimed devices out there.  In the the
@@ -462,6 +461,8 @@ status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
     if (ret != MX_OK)
         driver_.reset();
 
+    // TODO(cja): For now, set MMIO as default and switch to PIO in the workaround.
+    is_mmio_ = true;
     return ret;
 }
 
